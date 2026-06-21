@@ -25,4 +25,5 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          APPLE_CALENDAR_ICS_URLS: ${{ secrets.APPLE_CALENDAR_ICS_URLS }}
         run: python daily_bot.py
