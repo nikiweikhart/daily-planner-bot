@@ -210,11 +210,11 @@ def format_event(event):
 def build_message():
     test_dates = [
         date(2026, 6, 26),
-        date(2026, 6, 30),
+        date(2026, 6, 27),
     ]
 
     lines = []
-    lines.append("Kalender-Test für 26.06. und 30.06.:")
+    lines.append("Kalender-Test für 26.06. und 27.06.:")
     lines.append("")
 
     for target_day in test_dates:
