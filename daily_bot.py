@@ -3,6 +3,7 @@ import requests
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from icalendar import Calendar
+import recurring_ical_events
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
@@ -44,6 +45,7 @@ def get_events_for_tomorrow():
     end_of_day = start_of_day + timedelta(days=1)
 
     events = []
+    debug_lines = []
 
     for calendar_index, calendar_url in enumerate(calendar_urls, start=1):
         try:
@@ -52,10 +54,13 @@ def get_events_for_tomorrow():
 
             calendar = Calendar.from_ical(response.text)
 
-            for component in calendar.walk():
-                if component.name != "VEVENT":
-                    continue
+            raw_events = [component for component in calendar.walk() if component.name == "VEVENT"]
+            debug_lines.append(f"Kalender {calendar_index}: {len(raw_events)} Roh-Termine")
 
+            expanded_events = recurring_ical_events.of(calendar).between(start_of_day, end_of_day)
+            debug_lines.append(f"Kalender {calendar_index}: {len(expanded_events)} Termine für morgen")
+
+            for component in expanded_events:
                 summary = str(component.get("summary", "Ohne Titel"))
 
                 start_raw = component.get("dtstart")
@@ -74,24 +79,18 @@ def get_events_for_tomorrow():
                 if start is None:
                     continue
 
-                if start < end_of_day and end > start_of_day:
-                    events.append({
-                        "title": summary,
-                        "start": start,
-                        "end": end,
-                        "calendar": calendar_index
-                    })
+                events.append({
+                    "title": summary,
+                    "start": start,
+                    "end": end,
+                    "calendar": calendar_index
+                })
 
         except Exception as error:
-            events.append({
-                "title": f"Fehler bei Kalender {calendar_index}: {error}",
-                "start": start_of_day,
-                "end": start_of_day,
-                "calendar": calendar_index
-            })
+            debug_lines.append(f"Kalender {calendar_index}: Fehler - {error}")
 
     events.sort(key=lambda event: event["start"])
-    return tomorrow, events
+    return tomorrow, events, debug_lines
 
 
 def format_event(event):
@@ -107,7 +106,7 @@ def format_event(event):
 
 
 def build_message():
-    tomorrow, events = get_events_for_tomorrow()
+    tomorrow, events, debug_lines = get_events_for_tomorrow()
 
     lines = []
     lines.append(f"Plan für morgen ({tomorrow.strftime('%d.%m.%Y')}):")
@@ -118,6 +117,10 @@ def build_message():
     else:
         for event in events:
             lines.append(format_event(event))
+
+    lines.append("")
+    lines.append("--- Debug ---")
+    lines.extend(debug_lines)
 
     return "\n".join(lines)
 
