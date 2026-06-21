@@ -16,10 +16,12 @@ TIMEZONE = ZoneInfo("Europe/Vienna")
 
 def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+
     data = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": text
     }
+
     response = requests.post(url, data=data)
     response.raise_for_status()
 
@@ -36,84 +38,109 @@ def normalize_datetime(value):
     return None
 
 
-def format_event(component, calendar_index):
-    summary = str(component.get("summary", "Ohne Titel"))
+def get_events_for_day(target_day):
+    start_of_day = datetime(
+        target_day.year,
+        target_day.month,
+        target_day.day,
+        0,
+        0,
+        tzinfo=TIMEZONE
+    )
 
-    start_raw = component.get("dtstart")
-    end_raw = component.get("dtend")
+    end_of_day = start_of_day + timedelta(days=1)
 
-    if not start_raw:
-        return None
+    events = []
+    seen_events = set()
 
-    start = normalize_datetime(start_raw.dt)
-
-    if end_raw:
-        end = normalize_datetime(end_raw.dt)
-    else:
-        end = start
-
-    if start is None:
-        return None
-
-    if start.hour == 0 and start.minute == 0 and end.hour == 0 and end.minute == 0:
-        time_text = "Ganztägig"
-    else:
-        time_text = f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')}"
-
-    return {
-        "text": f"{start.strftime('%d.%m.')} {time_text} | {summary} [Kalender {calendar_index}]",
-        "start": start
-    }
-
-
-def build_message():
-    now = datetime.now(TIMEZONE)
-    tomorrow = now.date() + timedelta(days=1)
-
-    start_search = datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, tzinfo=TIMEZONE)
-    end_search = start_search + timedelta(days=14)
-
-    all_events = []
-    debug_lines = []
-
-    for calendar_index, calendar_url in enumerate(calendar_urls, start=1):
+    for calendar_url in calendar_urls:
         try:
             response = requests.get(calendar_url, timeout=20)
             response.raise_for_status()
 
             calendar = Calendar.from_ical(response.text)
 
-            raw_events = [component for component in calendar.walk() if component.name == "VEVENT"]
-            debug_lines.append(f"Kalender {calendar_index}: {len(raw_events)} Roh-Termine")
-
-            expanded_events = recurring_ical_events.of(calendar).between(start_search, end_search)
-            debug_lines.append(f"Kalender {calendar_index}: {len(expanded_events)} Termine in den nächsten 14 Tagen")
+            expanded_events = recurring_ical_events.of(calendar).between(
+                start_of_day,
+                end_of_day
+            )
 
             for component in expanded_events:
-                event = format_event(component, calendar_index)
-                if event:
-                    all_events.append(event)
+                summary = str(component.get("summary", "Ohne Titel"))
 
-        except Exception as error:
-            debug_lines.append(f"Kalender {calendar_index}: Fehler - {error}")
+                start_raw = component.get("dtstart")
+                end_raw = component.get("dtend")
 
-    all_events.sort(key=lambda event: event["start"])
+                if not start_raw:
+                    continue
+
+                start = normalize_datetime(start_raw.dt)
+
+                if end_raw:
+                    end = normalize_datetime(end_raw.dt)
+                else:
+                    end = start
+
+                if start is None:
+                    continue
+
+                # Doppelte Termine entfernen
+                event_key = (
+                    summary,
+                    start.isoformat(),
+                    end.isoformat()
+                )
+
+                if event_key in seen_events:
+                    continue
+
+                seen_events.add(event_key)
+
+                events.append({
+                    "title": summary,
+                    "start": start,
+                    "end": end
+                })
+
+        except Exception:
+            continue
+
+    events.sort(key=lambda event: event["start"])
+    return events
+
+
+def format_event(event):
+    start = event["start"]
+    end = event["end"]
+
+    is_all_day = (
+        start.hour == 0
+        and start.minute == 0
+        and end.hour == 0
+        and end.minute == 0
+    )
+
+    if is_all_day:
+        time_text = "Ganztägig"
+    else:
+        time_text = f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')}"
+
+    return f"{time_text} | {event['title']}"
+
+
+def build_message():
+    tomorrow = datetime.now(TIMEZONE).date() + timedelta(days=1)
+    events = get_events_for_day(tomorrow)
 
     lines = []
-    lines.append(f"Kalender-Debug ab morgen ({tomorrow.strftime('%d.%m.%Y')}):")
+    lines.append(f"Plan für morgen ({tomorrow.strftime('%d.%m.%Y')}):")
     lines.append("")
 
-    if not all_events:
-        lines.append("Keine Termine in den nächsten 14 Tagen gefunden.")
+    if not events:
+        lines.append("Keine Termine eingetragen.")
     else:
-        lines.append("Gefundene Termine:")
-        lines.append("")
-        for event in all_events[:25]:
-            lines.append(event["text"])
-
-    lines.append("")
-    lines.append("--- Debug ---")
-    lines.extend(debug_lines)
+        for event in events:
+            lines.append(format_event(event))
 
     return "\n".join(lines)
 
