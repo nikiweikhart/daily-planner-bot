@@ -1,9 +1,9 @@
 name: Daily Planner Bot
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "10 4 * * *"
+  workflow_dispatch:
 
 jobs:
   send-message:
