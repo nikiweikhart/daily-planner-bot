@@ -208,31 +208,23 @@ def format_event(event):
 
 
 def build_message():
-    test_dates = [
-        date(2026, 6, 26),
-        date(2026, 6, 27),
-    ]
+    tomorrow = datetime.now(TIMEZONE).date() + timedelta(days=1)
+
+    manual_events = get_manual_school_events_for_day(tomorrow)
+    calendar_events = get_calendar_events_for_day(tomorrow)
+
+    all_events = manual_events + calendar_events
+    all_events.sort(key=lambda event: event["start"])
 
     lines = []
-    lines.append("Kalender-Test für 26.06. und 27.06.:")
+    lines.append(f"Plan für morgen ({tomorrow.strftime('%d.%m.%Y')}):")
     lines.append("")
 
-    for target_day in test_dates:
-        manual_events = get_manual_school_events_for_day(target_day)
-        calendar_events = get_calendar_events_for_day(target_day)
-
-        all_events = manual_events + calendar_events
-        all_events.sort(key=lambda event: event["start"])
-
-        lines.append(f"{target_day.strftime('%d.%m.%Y')}:")
-        
-        if not all_events:
-            lines.append("Keine Termine eingetragen.")
-        else:
-            for event in all_events:
-                lines.append(format_event(event))
-
-        lines.append("")
+    if not all_events:
+        lines.append("Keine Termine eingetragen.")
+    else:
+        for event in all_events:
+            lines.append(format_event(event))
 
     return "\n".join(lines)
 
