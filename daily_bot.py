@@ -1,18 +1,44 @@
 import os
 import requests
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-today = datetime.now().strftime("%d.%m.%Y")
+vienna_time = datetime.now(ZoneInfo("Europe/Vienna"))
 
-message = f"""Guten Morgen!
+weekday_names = {
+    "Monday": "Montag",
+    "Tuesday": "Dienstag",
+    "Wednesday": "Mittwoch",
+    "Thursday": "Donnerstag",
+    "Friday": "Freitag",
+    "Saturday": "Samstag",
+    "Sunday": "Sonntag",
+}
 
-Dein Tagesplaner-Bot funktioniert.
-Heute ist der {today}.
+weekday = weekday_names[vienna_time.strftime("%A")]
+date = vienna_time.strftime("%d.%m.%Y")
 
-Das ist erstmal nur ein Test. Danach bauen wir Kalender, Schule und Obsidian ein.
+message = f"""Guten Morgen Niki 👋
+
+Heute ist {weekday}, der {date}.
+
+Tagesplan:
+- Schule/Termine: noch nicht verbunden
+- Sport: noch nicht verbunden
+- Lernen: 20–30 Minuten KI oder VWA
+- Lesen: 20 Minuten
+- Wichtigster Fokus: eine Sache sauber erledigen
+
+Status:
+✅ Telegram funktioniert
+✅ GitHub Actions funktioniert
+✅ Automatischer Tagesplaner läuft grundsätzlich
+
+Nächster Ausbau:
+Kalender und Obsidian einbinden.
 """
 
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
