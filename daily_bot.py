@@ -216,18 +216,42 @@ def build_message():
     all_events = manual_events + calendar_events
     all_events.sort(key=lambda event: event["start"])
 
+    weekday_names = {
+        0: "Montag",
+        1: "Dienstag",
+        2: "Mittwoch",
+        3: "Donnerstag",
+        4: "Freitag",
+        5: "Samstag",
+        6: "Sonntag",
+    }
+
+    weekday = weekday_names[tomorrow.weekday()]
+
     lines = []
-    lines.append(f"Plan für morgen ({tomorrow.strftime('%d.%m.%Y')}):")
+    lines.append(f"Guten Morgen Niki ☀️")
+    lines.append("")
+    lines.append(f"Hier ist dein Plan für morgen, {weekday}, den {tomorrow.strftime('%d.%m.%Y')}:")
     lines.append("")
 
     if not all_events:
-        lines.append("Keine Termine eingetragen.")
+        lines.append("Heute ist nichts Fixes eingetragen.")
+        lines.append("")
+        lines.append("Nutze den Tag bewusst: Schlaf nachholen, etwas Ordnung schaffen oder einfach kurz durchatmen.")
     else:
+        lines.append("Deine Termine:")
+        lines.append("")
+
         for event in all_events:
             lines.append(format_event(event))
 
-    return "\n".join(lines)
+        lines.append("")
+        lines.append("Denk daran: lieber etwas früher losgehen und ohne Stress starten.")
 
+    lines.append("")
+    lines.append("Hab einen guten Start in den Tag.")
+
+    return "\n".join(lines)
 
 if __name__ == "__main__":
     message = build_message()
