@@ -1,54 +1,48 @@
 import os
 import requests
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
-BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-vienna_time = datetime.now(ZoneInfo("Europe/Vienna"))
+calendar_urls_raw = os.environ.get("APPLE_CALENDAR_ICS_URLS", "")
+calendar_urls = [url.strip() for url in calendar_urls_raw.splitlines() if url.strip()]
 
-weekday_names = {
-    "Monday": "Montag",
-    "Tuesday": "Dienstag",
-    "Wednesday": "Mittwoch",
-    "Thursday": "Donnerstag",
-    "Friday": "Freitag",
-    "Saturday": "Samstag",
-    "Sunday": "Sonntag",
-}
 
-weekday = weekday_names[vienna_time.strftime("%A")]
-date = vienna_time.strftime("%d.%m.%Y")
+def send_telegram_message(text):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
-message = f"""Guten Morgen Niki 👋
+    data = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": text
+    }
 
-Heute ist {weekday}, der {date}.
+    response = requests.post(url, data=data)
+    response.raise_for_status()
 
-Tagesplan:
-- Schule/Termine: noch nicht verbunden
-- Sport: noch nicht verbunden
-- Lernen: 20–30 Minuten KI oder VWA
-- Lesen: 20 Minuten
-- Wichtigster Fokus: eine Sache sauber erledigen
 
-Status:
-✅ Telegram funktioniert
-✅ GitHub Actions funktioniert
-✅ Automatischer Tagesplaner läuft grundsätzlich
+def test_calendars():
+    message_lines = []
 
-Nächster Ausbau:
-Kalender und Obsidian einbinden.
-"""
+    message_lines.append("Kalender-Test:")
+    message_lines.append(f"Gefundene Kalender: {len(calendar_urls)}")
+    message_lines.append("")
 
-url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    for index, calendar_url in enumerate(calendar_urls, start=1):
+        try:
+            response = requests.get(calendar_url, timeout=20)
+            response.raise_for_status()
 
-response = requests.post(url, data={
-    "chat_id": CHAT_ID,
-    "text": message
-})
+            if "BEGIN:VCALENDAR" in response.text:
+                message_lines.append(f"Kalender {index}: erfolgreich geladen")
+            else:
+                message_lines.append(f"Kalender {index}: geladen, aber kein gültiger Kalender erkannt")
 
-if response.status_code != 200:
-    raise Exception(f"Telegram error: {response.text}")
+        except Exception as error:
+            message_lines.append(f"Kalender {index}: Fehler - {error}")
 
-print("Message sent successfully.")
+    return "\n".join(message_lines)
+
+
+if __name__ == "__main__":
+    text = test_calendars()
+    send_telegram_message(text)
