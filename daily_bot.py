@@ -208,10 +208,10 @@ def format_event(event):
 
 
 def build_message():
-    tomorrow = datetime.now(TIMEZONE).date() + timedelta(days=1)
+    today = datetime.now(TIMEZONE).date()
 
-    manual_events = get_manual_school_events_for_day(tomorrow)
-    calendar_events = get_calendar_events_for_day(tomorrow)
+    manual_events = get_manual_school_events_for_day(today)
+    calendar_events = get_calendar_events_for_day(today)
 
     all_events = manual_events + calendar_events
     all_events.sort(key=lambda event: event["start"])
@@ -226,12 +226,12 @@ def build_message():
         6: "Sonntag",
     }
 
-    weekday = weekday_names[tomorrow.weekday()]
+    weekday = weekday_names[today.weekday()]
 
     lines = []
-    lines.append(f"Guten Morgen Niki ☀️")
+    lines.append("Guten Morgen Niki ☀️")
     lines.append("")
-    lines.append(f"Hier ist dein Plan für morgen, {weekday}, den {tomorrow.strftime('%d.%m.%Y')}:")
+    lines.append(f"Hier ist dein Plan für heute, {weekday}, den {today.strftime('%d.%m.%Y')}:")
     lines.append("")
 
     if not all_events:
@@ -246,7 +246,7 @@ def build_message():
             lines.append(format_event(event))
 
         lines.append("")
-        lines.append("Denk daran: lieber etwas früher losgehen und ohne Stress starten.")
+        lines.append("Starte ruhig und geh lieber ein paar Minuten früher los, damit der Tag nicht direkt stressig wird.")
 
     lines.append("")
     lines.append("Hab einen guten Start in den Tag.")
