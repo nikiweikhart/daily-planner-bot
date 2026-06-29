@@ -1,6 +1,6 @@
 import os
 import requests
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from zoneinfo import ZoneInfo
 from icalendar import Calendar
 import recurring_ical_events
@@ -182,7 +182,8 @@ def get_calendar_events_for_day(target_day):
                     "source": "calendar"
                 })
 
-        except Exception:
+        except Exception as error:
+            print(f"Kalender konnte nicht geladen werden: {error}")
             continue
 
     return events
@@ -251,7 +252,15 @@ def build_message():
     lines.append("")
     lines.append("Hab einen guten Start in den Tag.")
 
+    # Debug-Zeit: Damit wir sehen, wann GitHub den Bot wirklich ausgeführt hat.
+    debug_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    debug_vienna = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M Wien")
+
+    lines.append("")
+    lines.append(f"Debug: Workflow gestartet um {debug_utc} / {debug_vienna}")
+
     return "\n".join(lines)
+
 
 if __name__ == "__main__":
     message = build_message()
